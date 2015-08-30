@@ -14,8 +14,11 @@ class ContactImporter < EntityImporter
   protected
 
   def contacts
-    @contacts ||= csv_entries.map(&:to_hash).map do |p|
-      ContactPresenter.new(p).to_contact
+    @contacts ||= csv_entries.inject([]) do |result, chunks|
+      chunks.each do |row|
+        result << ContactPresenter.new(row).to_contact
+      end
+      result
     end
   end
 

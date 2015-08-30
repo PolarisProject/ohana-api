@@ -97,8 +97,29 @@ the JSON response so it is easier to read in the browser.
 
 - From the command line, run `script/reset` to reset the database.
 
-- Run `script/import` to import your CSV files.
+- Run `script/import` to import your CSV files, but first read the notes below.
 
+#### Speeding up the import script
+In order to dynamically update the full-text search index when entities change,
+the various models include callbacks to update their parents via `touch`.
+This considerably slows down the import. To speed up the import process, you'll
+want to make the following temporary changes to the code:
+
+- Do a search for `, touch: true` and remove that code anywhere you see it.
+- In `app/models/service.rb`, remove the `after_add` and `after_remove` callbacks
+so that line 12 reads `has_and_belongs_to_many :categories`.
+- Remove or comment out line 59 (`after_save :update_location_status, if: :status_changed?`)
+
+Then run `script/import` to import your data. Once it's done, launch the
+Rails console by running `rails c` in your Terminal, then run the following
+command to update the search index:
+```ruby
+Location.find_each(&:touch)
+```
+
+You'll then want to undo all the changes to the code.
+
+#### Additional import info
 If your data doesn't already include a taxonomy, and if you want to use the Open
 Eligibility taxonomy, you can create the categories with this command:
 ```

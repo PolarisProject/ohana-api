@@ -1,7 +1,6 @@
-LocationImporter = Struct.new(:content, :addresses) do
+LocationImporter = Struct.new(:path, :addresses) do
   def self.import_file(path, addresses_path)
-    content = File.read(path)
-    new(content, addresses_for(addresses_path)).tap(&:import)
+    new(path, addresses_for(addresses_path)).tap(&:import)
   end
 
   def self.check_and_import_file(locations_path, addresses_path)
@@ -40,13 +39,16 @@ LocationImporter = Struct.new(:content, :addresses) do
   protected
 
   def locations
-    @locations ||= csv_entries.map(&:to_hash).map do |p|
-      LocationPresenter.new(p, addresses).to_location
+    @locations ||= csv_entries.inject([]) do |locs, chunks|
+      chunks.each do |row|
+        locs << LocationPresenter.new(row, addresses).to_location
+      end
+      locs
     end
   end
 
   def csv_entries
-    @csv_entries ||= CSV.new(content, headers: true, header_converters: :symbol).entries
+    @csv_entries ||= SmarterCSV.process(path, chunk_size: 100, convert_values_to_numeric: false)
   end
 
   def self.required_headers
